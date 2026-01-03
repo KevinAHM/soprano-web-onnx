@@ -1,7 +1,19 @@
+---
+title: Soprano ONNX Web Demo
+emoji: "\U0001F3A7"
+colorFrom: blue
+colorTo: indigo
+sdk: static
+app_file: index.html
+pinned: false
+models:
+  - KevinAHM/soprano-onnx
+---
+
 <!-- Version 0.0.2 -->
 <div align="center">
 
-# Soprano ONNX Streaming — Instant Text‑to‑Speech in the Browser (WebGPU/WASM)
+# Soprano ONNX Streaming — Instant Text‑to‑Speech in the Browser (WASM)
 
 [![Upstream](https://img.shields.io/badge/Upstream-ekwek1%2Fsoprano-black?logo=github)](https://github.com/ekwek1/soprano)
 [![Hugging Face Model](https://img.shields.io/badge/HuggingFace-Model-orange?logo=huggingface)](https://huggingface.co/ekwek/Soprano-80M)
@@ -9,7 +21,7 @@
 
 </div>
 
-A **static, client-side** browser demo that runs the Soprano TTS pipeline using **onnxruntime-web** (WebGPU or WASM).
+A **static, client-side** browser demo that runs the Soprano TTS pipeline using **onnxruntime-web**.
 
 This is a conversion/port of the original Soprano project:
 https://github.com/ekwek1/soprano
@@ -18,7 +30,7 @@ https://github.com/ekwek1/soprano
 
 ## Requirements
 
-- A modern browser. **Chrome/Edge + WebGPU** is recommended for best performance.
+- A modern browser (Chrome, Edge, Firefox, Safari).
 - You must serve this folder over HTTP (opening `index.html` via `file://` usually breaks `fetch()` / module loading).
 - The demo loads `onnxruntime-web` and `@huggingface/transformers` from a CDN by default (network required unless you vendor them).
 - The model files are large; plan to use **Git LFS** or GitHub Releases if you publish them.
@@ -35,21 +47,21 @@ Place model artifacts under `./models/`:
 ├─ onnx-streaming.js
 ├─ PCMPlayerWorklet.js
 ├─ style.css
-└─ models/
-   ├─ soprano_backbone_kv.onnx
-   ├─ soprano_decoder.onnx
-   ├─ soprano_decoder.onnx.data
-   └─ soprano-tokenizer/
-      ├─ tokenizer.json
-      ├─ tokenizer_config.json
-      ├─ special_tokens_map.json
-      ├─ config.json
-      └─ generation_config.json
+├─ onnx/
+│  ├─ soprano_backbone_kv.onnx
+│  ├─ soprano_decoder.onnx
+│  └─ soprano_decoder.onnx.data
+├─ tokenizer.json
+├─ tokenizer_config.json
+├─ special_tokens_map.json
+├─ config.json
+└─ generation_config.json
 ```
 
 Notes:
-- The decoder uses external weights; `soprano_decoder.onnx.data` must be present and served next to `soprano_decoder.onnx`.
-- The tokenizer is loaded locally from `models/soprano-tokenizer` (remote model downloads are disabled in the demo).
+- ONNX models live in `onnx/` following HuggingFace convention.
+- The decoder uses external weights (`.onnx.data` file must be present alongside the `.onnx` file).
+- Tokenizer files are in the root directory.
 
 ---
 
@@ -79,13 +91,13 @@ Sampling defaults are set in `onnx-streaming.js` (constructor):
 
 ## Troubleshooting
 
-- **“Load failed” / model never becomes Ready**
+- **"Load failed" / model never becomes Ready**
   - Verify the `models/` filenames match `MODELS` in `onnx-streaming.js`
-  - Check DevTools → Network for a missing `soprano_decoder.onnx.data` (404)
+  - Check DevTools → Network for a missing `.onnx.data` file (404)
   - Confirm `models/soprano-tokenizer/` contains `tokenizer.json` (and related files)
-- **Slow performance**
-  - Prefer WebGPU and keep other GPU-heavy tabs closed
-  - WASM/CPU is a fallback and will be much slower
+- **Performance notes**
+  - Both backbone and decoder run on WASM/CPU
+  - Achieves real-time streaming on modern hardware
 
 ---
 

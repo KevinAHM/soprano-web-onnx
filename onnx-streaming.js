@@ -2,9 +2,9 @@ import { PCMPlayerWorklet } from './PCMPlayerWorklet.js';
 
 // Configuration
 const MODELS = {
-    backbone: './models/soprano_backbone_kv.onnx',
-    decoder: './models/soprano_decoder.onnx',
-    tokenizer: './models/soprano-tokenizer'
+    backbone: './onnx/soprano_backbone_kv.onnx',
+    decoder: './onnx/soprano_decoder.onnx',
+    tokenizer: './'
 };
 
 const RECEPTIVE_FIELD = 4;
@@ -435,90 +435,6 @@ function preprocessText(text, batchSize = 3, minLength = 30) {
 }
 
 // ============================================
-// WebGPU Detector
-// ============================================
-class WebGPUDetector {
-    constructor() {
-        this.status = 'unknown';
-        this.gpuInfo = null;
-        this.reason = null;
-    }
-
-    async detect() {
-        if (!navigator.gpu) {
-            this.status = 'unavailable';
-            this.reason = this.getBrowserReason();
-            return this;
-        }
-
-        try {
-            const adapter = await navigator.gpu.requestAdapter();
-
-            if (!adapter) {
-                this.status = 'unavailable';
-                this.reason = 'No compatible GPU adapter found';
-                return this;
-            }
-
-            // Get adapter info if available
-            if (adapter.requestAdapterInfo) {
-                const info = await adapter.requestAdapterInfo();
-                this.gpuInfo = {
-                    vendor: info.vendor || 'Unknown',
-                    architecture: info.architecture || '',
-                    device: info.device || '',
-                    description: info.description || ''
-                };
-            }
-
-            // Verify we can get a device
-            const device = await adapter.requestDevice();
-            if (device) {
-                this.status = 'available';
-                device.destroy();
-            } else {
-                this.status = 'unavailable';
-                this.reason = 'Could not acquire GPU device';
-            }
-
-        } catch (error) {
-            this.status = 'error';
-            this.reason = error.message;
-        }
-
-        return this;
-    }
-
-    getBrowserReason() {
-        const ua = navigator.userAgent.toLowerCase();
-
-        if (ua.includes('firefox')) {
-            return 'Firefox: Enable in about:config (dom.webgpu.enabled)';
-        }
-        if (ua.includes('safari') && !ua.includes('chrome')) {
-            return 'Safari: WebGPU support is experimental';
-        }
-        if (ua.includes('chrome') || ua.includes('edge')) {
-            return 'Update to Chrome 113+ or Edge 113+ for WebGPU';
-        }
-
-        return 'Your browser does not support WebGPU';
-    }
-
-    getDisplayName() {
-        if (!this.gpuInfo) return null;
-
-        const { vendor, device, description } = this.gpuInfo;
-
-        if (description) return description;
-        if (device) return device;
-        if (vendor && vendor !== 'Unknown') return `${vendor} GPU`;
-
-        return 'WebGPU Device';
-    }
-}
-
-// ============================================
 // Dual-Layer Visualizer
 // ============================================
 class DualLayerVisualizer {
@@ -696,8 +612,6 @@ class SopranoONNXStreaming {
         this.isGenerating = false;
         this.abortController = null;
         this.audioContext = null;
-        this.webgpuDetector = new WebGPUDetector();
-        this.selectedDevice = 'webgpu';
 
         // UI Elements
         this.elements = {
@@ -706,11 +620,6 @@ class SopranoONNXStreaming {
             generateBtn: document.getElementById('generate-btn'),
             stopBtn: document.getElementById('stop-btn'),
             btnLoader: document.getElementById('btn-loader'),
-            cpuCard: document.getElementById('device-cpu'),
-            gpuCard: document.getElementById('device-gpu'),
-            gpuBanner: document.getElementById('gpu-banner'),
-            gpuBannerTitle: document.getElementById('gpu-banner-title'),
-            gpuBannerMessage: document.getElementById('gpu-banner-message'),
             statusIndicator: document.getElementById('status-indicator'),
             statStatus: document.getElementById('stat-status'),
             statTTFB: document.getElementById('stat-ttfb'),
@@ -744,11 +653,7 @@ class SopranoONNXStreaming {
         this.updateStatus('Initializing...', 'running');
 
         try {
-            // 1. Detect WebGPU
-            await this.webgpuDetector.detect();
-            this.setupDeviceSelector();
-
-            // 2. Initialize Audio Context and Player
+            // Initialize Audio Context and Player
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
                 sampleRate: SAMPLE_RATE
             });
@@ -756,7 +661,7 @@ class SopranoONNXStreaming {
                 minBufferBeforePlaybackMs: 150
             });
 
-            // 3. Initialize Visualizer
+            // Initialize Visualizer
             this.visualizer = new DualLayerVisualizer(
                 this.elements.waveformCanvas,
                 this.elements.barsCanvas,
@@ -764,14 +669,14 @@ class SopranoONNXStreaming {
             );
             this.visualizer.start();
 
-            // 4. Load Tokenizer
-            const { AutoTokenizer, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0');
+            // Load Tokenizer
+            const { AutoTokenizer, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
             env.allowLocalModels = true;
             env.allowRemoteModels = false;
             env.localModelPath = new URL('.', window.location.href).pathname;
 
-            const tokenizerPath = 'models/soprano-tokenizer';
-            console.log(`Loading tokenizer from: ${tokenizerPath}`);
+            const tokenizerPath = './';
+            console.log('Loading tokenizer...');
             this.tokenizer = await AutoTokenizer.from_pretrained(tokenizerPath, {
                 local_files_only: true
             });
@@ -785,66 +690,7 @@ class SopranoONNXStreaming {
         }
     }
 
-    setupDeviceSelector() {
-        const { status, reason } = this.webgpuDetector;
-        const gpuName = this.webgpuDetector.getDisplayName();
-
-        if (status === 'available') {
-            // WebGPU is available
-            this.elements.gpuBanner.hidden = false;
-            this.elements.gpuBanner.classList.add('gpu-banner--available');
-            this.elements.gpuBannerTitle.textContent = 'WebGPU Available';
-            this.elements.gpuBannerMessage.textContent = gpuName ? `Detected: ${gpuName}` : 'Hardware acceleration enabled';
-
-            this.selectDevice('webgpu');
-            console.log('WebGPU available:', gpuName || 'Unknown GPU');
-        } else {
-            // WebGPU not available
-            this.elements.gpuBanner.hidden = false;
-            this.elements.gpuBanner.classList.add('gpu-banner--unavailable');
-            this.elements.gpuBannerTitle.textContent = 'WebGPU Unavailable';
-            this.elements.gpuBannerMessage.textContent = reason || 'Using CPU fallback';
-
-            // Disable GPU card
-            this.elements.gpuCard.setAttribute('aria-disabled', 'true');
-            this.selectDevice('wasm');
-            console.warn('WebGPU not available:', reason);
-        }
-    }
-
-    selectDevice(device) {
-        if (device === 'webgpu' && this.webgpuDetector.status !== 'available') {
-            return;
-        }
-
-        this.selectedDevice = device;
-
-        // Update ARIA states
-        this.elements.cpuCard.setAttribute('aria-checked', device === 'wasm');
-        this.elements.gpuCard.setAttribute('aria-checked', device === 'webgpu');
-
-        console.log('Selected device:', device);
-    }
-
     setupEventListeners() {
-        // Device cards
-        this.elements.cpuCard.addEventListener('click', () => this.selectDevice('wasm'));
-        this.elements.gpuCard.addEventListener('click', () => {
-            if (this.webgpuDetector.status === 'available') {
-                this.selectDevice('webgpu');
-            }
-        });
-
-        // Keyboard navigation for device cards
-        [this.elements.cpuCard, this.elements.gpuCard].forEach(card => {
-            card.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    card.click();
-                }
-            });
-        });
-
         // Generate and stop buttons
         this.elements.generateBtn.addEventListener('click', () => this.startGeneration());
         this.elements.stopBtn.addEventListener('click', () => this.stopGeneration());
@@ -916,44 +762,39 @@ class SopranoONNXStreaming {
         }
     }
 
-    async loadModels(executionProvider) {
-        if (this.backboneSession && this.currentProvider === executionProvider) return;
+    async loadModels() {
+        if (this.backboneSession) return;
 
-        this.updateStatus(`Loading (${executionProvider})...`, 'running');
+        this.updateStatus('Loading models...', 'running');
         this.updateModelStatus('loading', 'Loading...');
         this.elements.btnLoader.style.display = 'block';
         this.elements.generateBtn.disabled = true;
 
         try {
-            const sessionOptions = {
-                executionProviders: [executionProvider],
-                freeDimensionOverrides: { 'batch': 1 }
+            const backboneOptions = {
+                executionProviders: ['wasm'],
+                freeDimensionOverrides: { 'batch': 1 },
+                graphOptimizationLevel: 'all'
             };
 
-            console.log(`Loading sessions with ${executionProvider}...`);
-            this.backboneSession = await ort.InferenceSession.create(MODELS.backbone, sessionOptions);
+            console.log('Loading backbone + decoder (WASM)...');
+            this.backboneSession = await ort.InferenceSession.create(MODELS.backbone, backboneOptions);
 
-            // Manual fetch for decoder and its external data
-            console.log('Fetching decoder files...');
-            const decoderUrl = MODELS.decoder;
-            const dataUrl = decoderUrl + '.data';
-
+            // Decoder with external data
+            const dataUrl = MODELS.decoder + '.data';
             const [decoderBuf, dataBuf] = await Promise.all([
-                fetch(decoderUrl).then(r => r.arrayBuffer()),
+                fetch(MODELS.decoder).then(r => r.arrayBuffer()),
                 fetch(dataUrl).then(r => r.arrayBuffer())
             ]);
 
-            sessionOptions.externalData = [
-                {
-                    data: new Uint8Array(dataBuf),
-                    path: 'soprano_decoder.onnx.data'
-                }
-            ];
+            const decoderOptions = {
+                executionProviders: ['wasm'],
+                freeDimensionOverrides: { 'batch': 1 },
+                externalData: [{ data: new Uint8Array(dataBuf), path: 'soprano_decoder.onnx.data' }]
+            };
+            this.decoderSession = await ort.InferenceSession.create(new Uint8Array(decoderBuf), decoderOptions);
 
-            this.decoderSession = await ort.InferenceSession.create(new Uint8Array(decoderBuf), sessionOptions);
-            this.currentProvider = executionProvider;
-
-            this.updateModelStatus('ready', `Ready (${executionProvider.toUpperCase()})`);
+            this.updateModelStatus('ready', 'Ready');
             console.log('Models loaded successfully.');
         } catch (err) {
             console.error('Model loading failed:', err);
@@ -982,10 +823,8 @@ class SopranoONNXStreaming {
         this.elements.stopBtn.disabled = false;
         this.elements.btnLoader.style.display = 'block';
 
-        const provider = this.selectedDevice;
-
         try {
-            await this.loadModels(provider);
+            await this.loadModels();
             this.updateStatus('Generating...', 'running');
 
             // Reset player and stats

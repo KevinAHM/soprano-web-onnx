@@ -76,9 +76,9 @@ Sampling defaults are set in `onnx-streaming.js` (constructor):
 ## Troubleshooting
 
 - **"Load failed" / model never becomes Ready**
-  - Verify the `models/` filenames match `MODELS` in `onnx-streaming.js`
+  - Verify the `onnx/` filenames match `MODELS` in `onnx-streaming.js`
   - Check DevTools → Network for a missing `.onnx.data` file (404)
-  - Confirm `models/soprano-tokenizer/` contains `tokenizer.json` (and related files)
+  - Confirm `/` contains `tokenizer.json` (and related files)
 - **Performance notes**
   - Both backbone and decoder run on WASM/CPU
   - Achieves real-time streaming on modern hardware
@@ -89,4 +89,5 @@ Sampling defaults are set in `onnx-streaming.js` (constructor):
 
 Soprano is released under **Apache-2.0** in the upstream repository:
 https://github.com/ekwek1/soprano
+
 

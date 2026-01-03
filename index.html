@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soprano - Neural TTS in Your Browser</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Syne:wght@500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- ONNX Runtime Web -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+</head>
+
+<body>
+    <!-- Ambient Background Effects -->
+    <div class="ambient-layer">
+        <div class="orb orb--primary"></div>
+        <div class="orb orb--secondary"></div>
+        <div class="orb orb--tertiary"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <div class="app-shell">
+        <!-- Hero Header -->
+        <header class="hero">
+            <div class="hero__brand">
+                <div class="logo">
+                    <svg class="logo__icon" viewBox="0 0 32 32" fill="none">
+                        <path d="M16 4C16 4 8 8 8 16C8 24 16 28 16 28" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M16 4C16 4 24 8 24 16C24 24 16 28 16 28" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M12 10V22" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M16 8V24" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M20 10V22" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+                        <defs>
+                            <linearGradient id="logoGrad" x1="8" y1="4" x2="24" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#3b82f6"/>
+                                <stop offset="1" stop-color="#8b5cf6"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <span class="logo__text">Soprano</span>
+                </div>
+                <div class="hero__badge">
+                    <span class="badge">ONNX Runtime</span>
+                </div>
+            </div>
+            <p class="hero__tagline">Real-time neural text-to-speech, running entirely in your browser</p>
+        </header>
+
+        <main class="main">
+            <!-- Device Selection -->
+            <section class="device-section" aria-labelledby="device-heading">
+                <h2 id="device-heading" class="sr-only">Select Execution Device</h2>
+
+                <div class="device-cards">
+                    <button class="device-card" id="device-cpu" data-device="wasm" role="radio" aria-checked="false" tabindex="0">
+                        <div class="device-card__icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="4" y="4" width="16" height="16" rx="2"/>
+                                <path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/>
+                                <rect x="8" y="8" width="8" height="8" rx="1"/>
+                            </svg>
+                        </div>
+                        <div class="device-card__content">
+                            <span class="device-card__name">CPU</span>
+                            <span class="device-card__sub">WebAssembly</span>
+                        </div>
+                        <div class="device-card__check">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                                <path d="M8 12l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </button>
+
+                    <button class="device-card device-card--gpu" id="device-gpu" data-device="webgpu" role="radio" aria-checked="true" tabindex="0">
+                        <div class="device-card__icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="2" y="6" width="20" height="12" rx="2"/>
+                                <path d="M6 10h2v4H6zM10 10h2v4h-2zM14 10h2v4h-2zM18 10h2v4h-2z"/>
+                                <path d="M5 2v4M12 2v4M19 2v4"/>
+                            </svg>
+                        </div>
+                        <div class="device-card__content">
+                            <span class="device-card__name">WebGPU</span>
+                            <span class="device-card__sub">Hardware Accelerated</span>
+                            <span class="device-card__speed">Up to 10x faster</span>
+                        </div>
+                        <div class="device-card__check">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                                <path d="M8 12l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- GPU Status Banner -->
+                <div class="gpu-banner" id="gpu-banner" hidden>
+                    <div class="gpu-banner__icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 8v4M12 16h.01"/>
+                        </svg>
+                    </div>
+                    <div class="gpu-banner__content">
+                        <strong id="gpu-banner-title">WebGPU Available</strong>
+                        <span id="gpu-banner-message">Detected: Unknown GPU</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Input Section -->
+            <section class="input-section">
+                <div class="textarea-wrap">
+                    <textarea
+                        id="text-input"
+                        placeholder="Type or paste text to synthesize..."
+                        aria-label="Text to synthesize"
+                        maxlength="500"
+                    ></textarea>
+                    <div class="textarea-meta">
+                        <span class="char-count"><span id="char-count">0</span>/500</span>
+                    </div>
+                </div>
+
+                <!-- Sample Texts -->
+                <div class="sample-texts">
+                    <span class="sample-texts__label">Try:</span>
+                    <button class="sample-btn" data-text="Hello, welcome to Soprano. This is a demonstration of real-time text to speech running entirely in your browser.">Demo greeting</button>
+                    <button class="sample-btn" data-text="I completely understand how frustrating this must be for you. Let me take care of this right away and make sure we get it resolved.">Empathetic support</button>
+                    <button class="sample-btn" data-text="Wow, congratulations! That's absolutely fantastic news! I'm so thrilled for you!">Excited</button>
+                    <button class="sample-btn" data-text="I'm really sorry to hear about your loss. Please know that we're here for you, and take all the time you need.">Compassionate</button>
+                    <button class="sample-btn" data-text="Great question! I'd be happy to walk you through this step by step. First, let's start with the basics.">Helpful guide</button>
+                </div>
+
+                <div class="controls">
+                    <button id="generate-btn" class="btn btn--primary">
+                        <svg class="btn__icon" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon points="5,3 19,12 5,21"/>
+                        </svg>
+                        <span class="btn__text">Generate Audio</span>
+                        <div class="btn__loader" id="btn-loader"></div>
+                    </button>
+                    <button id="stop-btn" class="btn btn--secondary" disabled>
+                        <svg class="btn__icon" viewBox="0 0 24 24" fill="currentColor">
+                            <rect x="6" y="6" width="12" height="12" rx="1"/>
+                        </svg>
+                        <span class="btn__text">Stop</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Output Section: Visualizer + Metrics -->
+            <section class="output-section">
+                <div class="visualizer-panel">
+                    <div class="visualizer-panel__header">
+                        <span class="visualizer-panel__title">Audio Output</span>
+                        <div class="status-indicator" id="status-indicator">
+                            <span class="status-dot"></span>
+                            <span class="status-text" id="stat-status">Idle</span>
+                        </div>
+                    </div>
+                    <div class="visualizer-container">
+                        <canvas id="visualizer-waveform"></canvas>
+                        <canvas id="visualizer-bars" class="visualizer-bars"></canvas>
+                    </div>
+                </div>
+
+                <div class="metrics-panel">
+                    <h3 class="metrics-panel__title">Performance</h3>
+
+                    <div class="metric">
+                        <div class="metric__header">
+                            <span class="metric__label">Time to First Byte</span>
+                            <button class="metric__info" aria-label="TTFB explanation" data-tooltip="Time from request until first audio chunk is received">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 16v-4M12 8h.01"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="metric__value">
+                            <span class="metric__number" id="stat-ttfb">--</span>
+                            <span class="metric__unit">ms</span>
+                        </div>
+                        <div class="metric__bar">
+                            <div class="metric__bar-fill" id="ttfb-bar"></div>
+                        </div>
+                    </div>
+
+                    <div class="metric metric--highlight">
+                        <div class="metric__header">
+                            <span class="metric__label">Real-Time Factor</span>
+                            <button class="metric__info" aria-label="RTFx explanation" data-tooltip="Audio duration divided by processing time. Values above 1x mean faster than real-time playback.">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 16v-4M12 8h.01"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="metric__value">
+                            <span class="metric__number metric__number--large" id="stat-rtfx">--</span>
+                            <span class="metric__unit">x</span>
+                        </div>
+                        <div class="metric__context" id="rtfx-context">&gt;1x = faster than real-time</div>
+                    </div>
+
+                    <div class="metric metric--status">
+                        <span class="metric__label">Model</span>
+                        <div class="model-status" id="model-status">
+                            <span class="model-status__dot"></span>
+                            <span class="model-status__text">Not loaded</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2026 Soprano Audio Research</p>
+        </footer>
+    </div>
+
+    <script type="module" src="onnx-streaming.js?v=10"></script>
+</body>
+
+</html>

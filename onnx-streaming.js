@@ -774,7 +774,7 @@ class SopranoONNXStreaming {
             env.allowRemoteModels = false;
             env.localModelPath = BASE_PATH;
 
-            const tokenizerPath = MODELS.tokenizer;
+            const tokenizerPath = 'models/soprano-tokenizer';
             console.log(`Loading tokenizer from: ${tokenizerPath}`);
             this.tokenizer = await AutoTokenizer.from_pretrained(tokenizerPath, {
                 local_files_only: true

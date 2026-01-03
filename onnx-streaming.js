@@ -1,14 +1,10 @@
 import { PCMPlayerWorklet } from './PCMPlayerWorklet.js';
 
 // Configuration
-const BASE_PATH = new URL('.', window.location.href).pathname;
-const IS_GITHUB_PAGES = window.location.hostname.endsWith('github.io');
-const GH_RELEASE_BASE = 'https://github.com/KevinAHM/soprano-web-onnx/releases/download/v0.1.0';
-
 const MODELS = {
-    backbone: IS_GITHUB_PAGES ? `${GH_RELEASE_BASE}/soprano_backbone_kv.onnx` : `${BASE_PATH}models/soprano_backbone_kv.onnx`,
-    decoder: IS_GITHUB_PAGES ? `${GH_RELEASE_BASE}/soprano_decoder.onnx` : `${BASE_PATH}models/soprano_decoder.onnx`,
-    tokenizer: `${BASE_PATH}models/soprano-tokenizer`
+    backbone: './models/soprano_backbone_kv.onnx',
+    decoder: './models/soprano_decoder.onnx',
+    tokenizer: './models/soprano-tokenizer'
 };
 
 const RECEPTIVE_FIELD = 4;
@@ -772,7 +768,7 @@ class SopranoONNXStreaming {
             const { AutoTokenizer, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0');
             env.allowLocalModels = true;
             env.allowRemoteModels = false;
-            env.localModelPath = BASE_PATH;
+            env.localModelPath = new URL('.', window.location.href).pathname;
 
             const tokenizerPath = 'models/soprano-tokenizer';
             console.log(`Loading tokenizer from: ${tokenizerPath}`);

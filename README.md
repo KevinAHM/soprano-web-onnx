@@ -1,14 +1,13 @@
 # Soprano ONNX Streaming — Instant Text‑to‑Speech in the Browser (WASM)
 
 [![Upstream](https://img.shields.io/badge/Upstream-ekwek1%2Fsoprano-black?logo=github)](https://github.com/ekwek1/soprano)
-[![Hugging Face Model](https://img.shields.io/badge/HuggingFace-Model-orange?logo=huggingface)](https://huggingface.co/ekwek/Soprano-80M)
+[![Hugging Face Model](https://img.shields.io/badge/HuggingFace-Model-orange?logo=huggingface)](https://huggingface.co/KevinAHM/soprano-onnx)
+[![Hugging Face Demo for Soprano Web Onnx](https://img.shields.io/badge/HuggingFace-Demo-yellow?logo=huggingface)](https://huggingface.co/spaces/KevinAHM/soprano-web-onnx)
 
 A **static, client-side** browser demo that runs the Soprano TTS pipeline using **onnxruntime-web**.
 
 This is a conversion/port of the original Soprano project:
 https://github.com/ekwek1/soprano
-
-[![Hugging Face Demo for Soprano Web Onnx](https://img.shields.io/badge/HuggingFace-Demo-yellow?logo=huggingface)](https://huggingface.co/spaces/KevinAHM/soprano-web-onnx)
 
 ---
 
@@ -89,6 +88,7 @@ Sampling defaults are set in `onnx-streaming.js` (constructor):
 
 Soprano is released under **Apache-2.0** in the upstream repository:
 https://github.com/ekwek1/soprano
+
 
 
 
